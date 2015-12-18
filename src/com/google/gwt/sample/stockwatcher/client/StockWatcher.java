@@ -168,7 +168,7 @@ public class StockWatcher implements EntryPoint {
      */
 	private void updateTable(StockPrice price) {
 		// Make sure the stock is still in the stock table.
-		if (!stocks.contains(price)) {
+		if (!stocks.contains(price.getSymbol())) {
 			return;
 		}
 		
