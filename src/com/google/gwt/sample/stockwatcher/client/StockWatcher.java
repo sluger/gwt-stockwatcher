@@ -33,6 +33,7 @@ public class StockWatcher implements EntryPoint {
 	private Label lastUpdatedLabel = new Label();
 	private ArrayList<String> stocks = new ArrayList<String>();
 	private StockPriceServiceAsync stockPriceSvc = GWT.create(StockPriceService.class);
+	private Label errorMsgLabel = new Label();
 
 	/**
 	 * Entry point method.
@@ -60,6 +61,9 @@ public class StockWatcher implements EntryPoint {
 		addPanel.addStyleName("addPanel");
 
 		// Assemble Main panel.
+		errorMsgLabel.setStyleName("errorMessage");
+		errorMsgLabel.setVisible(false);
+
 		mainPanel.add(stocksFlexTable);
 		mainPanel.add(addPanel);
 		mainPanel.add(lastUpdatedLabel);
@@ -150,24 +154,32 @@ public class StockWatcher implements EntryPoint {
 	 * Generate random stock prices.
 	 */
 	private void refreshWatchList() {
-	    // Initialize the service proxy.
-	    if (stockPriceSvc == null) {
-	      stockPriceSvc = GWT.create(StockPriceService.class);
-	    }
+		// Initialize the service proxy.
+		if (stockPriceSvc == null) {
+			stockPriceSvc = GWT.create(StockPriceService.class);
+		}
 
-	     // Set up the callback object.
-	    AsyncCallback<StockPrice[]> callback = new AsyncCallback<StockPrice[]>() {
-	      public void onFailure(Throwable caught) {
-	        // TODO: Do something with errors.
-	      }
+		// Set up the callback object.
+		AsyncCallback<StockPrice[]> callback = new AsyncCallback<StockPrice[]>() {
+			public void onFailure(Throwable caught) {
+				// If the stock code is in the list of delisted codes, display
+				// an error message.
+				String details = caught.getMessage();
+				if (caught instanceof DelistedException) {
+					details = "Company '" + ((DelistedException) caught).getSymbol() + "' was delisted";
+				}
 
-	      public void onSuccess(StockPrice[] result) {
-	        updateTable(result);
-	      }
-	    };
+				errorMsgLabel.setText("Error: " + details);
+				errorMsgLabel.setVisible(true);
+			}
 
-	     // Make the call to the stock price service.
-	    stockPriceSvc.getPrices(stocks.toArray(new String[0]), callback);
+			public void onSuccess(StockPrice[] result) {
+				updateTable(result);
+			}
+		};
+
+		// Make the call to the stock price service.
+		stockPriceSvc.getPrices(stocks.toArray(new String[0]), callback);
 	}
 
 	/**
@@ -184,6 +196,9 @@ public class StockWatcher implements EntryPoint {
 		// Display timestamp showing last refresh.
 		DateTimeFormat dateFormat = DateTimeFormat.getFormat(DateTimeFormat.PredefinedFormat.DATE_TIME_MEDIUM);
 		lastUpdatedLabel.setText("Last update: " + dateFormat.format(new Date()));
+
+		// Clear any errors.
+		errorMsgLabel.setVisible(false);
 	}
 
 	/**
